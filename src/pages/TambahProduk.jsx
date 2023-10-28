@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, addDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import firestore from "../utils/firebase-produk";
 import Navigasi from "../components/Navigasi";
 
@@ -10,6 +10,7 @@ export default function TambahProduk() {
   const [produkUrl, setProdukUrl] = useState("");
 
   useEffect(() => {
+    // Fetch initial data
     const fetchData = async () => {
       try {
         const querySnapshot = await getDocs(collection(firestore, "store"));
@@ -24,6 +25,14 @@ export default function TambahProduk() {
     };
 
     fetchData();
+
+    // Set up a real-time listener for changes
+    const unsubscribe = onSnapshot(collection(firestore, "store"), (snapshot) => {
+      const updatedData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setProdukData(updatedData);
+    });
+
+    return unsubscribe;
   }, []);
 
   const handleSubmit = async () => {
