@@ -40,7 +40,7 @@ export default function Navigasi() {
           </li>
 
           <li>
-            <Link to="/HitungWR">Hitung WinRate</Link>
+            <Link to="/tambahproduk">Tambah Produk</Link>
           </li>
         </ul>
         <ul>
