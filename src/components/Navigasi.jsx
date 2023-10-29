@@ -36,7 +36,7 @@ export default function Navigasi() {
           </li>
 
           <li>
-            <Link to="/About">About</Link>
+            <Link to="/akun">Akun</Link>
           </li>
 
           <li>
@@ -54,7 +54,7 @@ export default function Navigasi() {
           </li>
 
           <li className="hideOnMobile">
-            <Link to="/about">Akun</Link>
+            <Link to="/akun">Akun</Link>
           </li>
 
           <li className="hideOnMobile">
