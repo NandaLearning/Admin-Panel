@@ -1,23 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, onSnapshot } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, doc, onSnapshot, addDoc, deleteDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import firestore from '../utils/firebase-produk';
 import Navigasi from '../components/Navigasi';
 
 export default function Home() {
     const [slides, setSlides] = useState([]);
-    const [uploading, setUploading] = useState(false);
+    const [newSlide, setNewSlide] = useState(null);
 
     useEffect(() => {
         let unsubscribe;
 
         const fetchData = async () => {
             try {
-                const slidesCollection = collection(firestore, "slide");
-                unsubscribe = onSnapshot(slidesCollection, (snapshot) => {
+                const promoCollection = collection(firestore, "promo");
+                unsubscribe = onSnapshot(promoCollection, (snapshot) => {
                     const slideData = [];
                     snapshot.forEach((doc) => {
-                        slideData.push({ id: doc.id, ...doc.data() });
+                        const slide = doc.data().slide;
+                        const id = doc.id;
+                        slideData.push({ id, slide });
                     });
                     setSlides(slideData);
                 });
@@ -35,21 +37,35 @@ export default function Home() {
         }
     }, []);
 
-    const handleImageChange = async (slideId, slideProperty, newImage, slideNumber) => {
-        setUploading(true);
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setNewSlide(file);
+    };
 
+    const addNewSlide = async () => {
+        if (newSlide) {
+            try {
+                const storage = getStorage();
+                const storageRef = ref(storage, `slides/${newSlide.name}`);
+                await uploadBytes(storageRef, newSlide);
+                const newImageUrl = await getDownloadURL(storageRef);
+
+                const promoCollection = collection(firestore, "promo");
+                await addDoc(promoCollection, { slide: newImageUrl });
+
+                setNewSlide(null);
+            } catch (error) {
+                console.error("Error adding new slide:", error);
+            }
+        }
+    };
+
+    const deleteSlide = async (slideId) => {
         try {
-            const storageRef = ref(storage, `slides/${slideId}/${slideProperty}.jpg`);
-            await uploadBytes(storageRef, newImage);
-            const newImageUrl = await getDownloadURL(storageRef);
-
-            const slideDocRef = doc(firestore, "slide", slideId);
-            const updateData = { [slideProperty]: newImageUrl };
-            await updateDoc(slideDocRef, updateData);
+            const slideDocRef = doc(firestore, "promo", slideId);
+            await deleteDoc(slideDocRef);
         } catch (error) {
-            console.error("Error updating the image:", error);
-        } finally {
-            setUploading(false);
+            console.error("Error deleting slide:", error);
         }
     };
 
@@ -58,65 +74,33 @@ export default function Home() {
             <div>
                 <Navigasi />
             </div>
-
-            <h1 className='text-center text-xl font-bold mt-10'>Add Slide</h1>
-            <div className='flex justify-center items-center'>
+            <h1 className='text-center text-xl font-bold mt-10'>Slides</h1>
+            <div className='justify-center items-center grid'>
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className='mt-5'
+                />
+                <button
+                    className="border border-gray-400 bg-green-500 text-white mt-5"
+                    onClick={addNewSlide}
+                >
+                    Add Slide
+                </button>
+            </div>
+            <div className='flex justify-center items-center flex-wrap'>
                 {slides.map((slide, index) => (
                     <div key={index} className='flex mt-10 flex-wrap justify-center items-center'>
                         <div>
-                            <img src={slide.slide1} alt="" className='w-96 mr-2 mt-10' />
-                            <div className='justify-center items-center flex'>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => handleImageChange(slide.id, "slide1", e.target.files[0], 1)}
-                                />
-                                {uploading ? (
-                                    <p>Uploading...</p>
-                                ) : (
-                                    <>
-                                        <button className="border border-gray-400 bg-green-500 rounded-lg w-28 h-7 text-white mt-5 mr-2">Change</button>
-                                        <button className="border border-gray-400 bg-red-500 rounded-lg w-28 h-7 text-white mt-5">Delete</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <img src={slide.slide2} alt="" className='w-96 mt-10' />
-                            <div className='justify-center items-center flex'>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => handleImageChange(slide.id, "slide2", e.target.files[0], 2)}
-                                />
-                                {uploading ? (
-                                    <p>Uploading...</p>
-                                ) : (
-                                    <>
-                                        <button className="border border-gray-400 bg-green-500 rounded-lg w-28 h-7 text-white mt-5 mr-2">Change</button>
-                                        <button className="border border-gray-400 bg-red-500 rounded-lg w-28 h-7 text-white mt-5">Delete</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <img src={slide.slide3} alt="" className='w-96 ml-2 mt-10' />
-                            <div className='justify-center items-center flex'>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => handleImageChange(slide.id, "slide3", e.target.files[0], 3)}
-                                />
-                                {uploading ? (
-                                    <p>Uploading...</p>
-                                ) : (
-                                    <>
-                                        <button className="border border-gray-400 bg-green-500 rounded-lg w-28 h-7 text-white mt-5 mr-2">Change</button>
-                                        <button className="border border-gray-400 bg-red-500 rounded-lg w-28 h-7 text-white mt-5">Delete</button>
-                                    </>
-                                )}
+                            <img src={slide.slide} alt={`Slide ${index + 1}`} className='w-96 mr-2 mt-10' />
+                            <div className='justify-center items-center flex mt-5'>
+                                <button
+                                    className="bg-red-500 border border-gray-400 rounded-lg w-24 h-8 mr-3 text-white"
+                                    onClick={() => deleteSlide(slide.id)}
+                                >
+                                    Delete
+                                </button>
                             </div>
                         </div>
                     </div>
